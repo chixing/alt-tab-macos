@@ -521,6 +521,7 @@ class App: AppCenterApplication {
         // Needs the AX runloop `BackgroundWork.start()` created, so it cannot go with the launch-time setup.
         AxObserverRegistry.shared.startRecoveryTicks()
         CliEvents.observe()
+        #if !LOCAL_PRO
         App.sparkleDelegate = SparkleDelegate()
         App.updaterController = SPUStandardUpdaterController(
             startingUpdater: false,
@@ -532,6 +533,7 @@ class App: AppCenterApplication {
         }
         #else
         DispatchQueue.main.asyncAfter(deadline: .now() + 30) { App.updaterController?.startUpdater() }
+        #endif
         #endif
         PreferencesEvents.initialize()
         BenchmarkRunner.startIfNeeded()
@@ -609,7 +611,9 @@ extension App: NSApplicationDelegate {
             // Notify UI observers so Settings rows repaint their ghost/pro-locked styling.
             NotificationCenter.default.post(name: ProTransitionManager.proLockStateDidChangeNotification, object: nil)
         }
-        #if DEBUG
+        #if LOCAL_PRO && DEBUG
+        LicenseManager.shared.mockProUser()
+        #elseif DEBUG
         // The QA launch never initializes persisted licensing: its in-memory state must neither read nor
         // alter the real license, and it must not schedule a revalidation that can later replace the mock.
         if CommandLine.arguments.contains("--mock-pro") {
